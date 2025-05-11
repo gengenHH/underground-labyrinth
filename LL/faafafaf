@@ -1,0 +1,308 @@
+from pygame import *
+
+class GameSprite(sprite.Sprite):
+    def __init__(self, player_image, player_x, player_y, size_x, size_y):
+        sprite.Sprite.__init__(self)
+        self.image_normal = transform.scale(image.load(player_image), (size_x, size_y))
+        self.image = self.image_normal
+        self.rect = self.image.get_rect()
+        self.rect.x = player_x
+        self.rect.y = player_y
+    
+    def update(self, mouse_pos, player_image_hover, size_x, size_y):
+        if self.rect.collidepoint(mouse_pos):
+            self.image_hover = transform.scale(image.load(player_image_hover), (size_x, size_y))
+            self.image = self.image_hover
+        else:
+            self.image = self.image_normal
+
+    def reset(self):
+        window.blit(self.image, (self.rect.x, self.rect.y))
+
+class Player(GameSprite):
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_x_speed,player_y_speed):
+        GameSprite.__init__(self, player_image, player_x, player_y, size_x, size_y)
+        self.x_speed = player_x_speed
+        self.y_speed = player_y_speed
+
+    def update(self, barriers): 
+        if self.rect.x <= win_width-80 and self.x_speed > 0 or self.rect.x >= 0 and self.x_speed < 0:
+            self.rect.x += self.x_speed
+        platforms_touched = sprite.spritecollide(self, barriers, False)
+        if self.x_speed > 0:
+            for p in platforms_touched:
+                self.rect.right = min(self.rect.right, p.rect.left) 
+        elif self.x_speed < 0:
+            for p in platforms_touched:
+                self.rect.left = max(self.rect.left, p.rect.right)
+        
+        if self.rect.y <= win_height-80 and self.y_speed > 0 or self.rect.y >= 0 and self.y_speed < 0:
+            self.rect.y += self.y_speed
+        platforms_touched = sprite.spritecollide(self, barriers, False)
+        if self.y_speed > 0:
+            for p in platforms_touched:
+                self.rect.bottom = min(self.rect.bottom, p.rect.top) 
+        elif self.y_speed < 0:
+            for p in platforms_touched:
+                self.rect.top = max(self.rect.top, p.rect.bottom) 
+
+    def fire(self):
+        bullet = Bullet('изображение/пуля.png', self.rect.centerx, self.rect.top, 35, 40, 13)
+        bullets.add(bullet)
+
+
+class Enemy_h(GameSprite):
+    side = "left"
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed, x1, x2):
+        GameSprite.__init__(self, player_image, player_x, player_y, size_x, size_y)
+        self.speed = player_speed
+        self.x1 = x1
+        self.x2 = x2
+
+    def update(self):
+        if self.rect.x <= self.x1: 
+            self.side = "right"
+        if self.rect.x >= self.x2:
+            self.side = "left"
+        if self.side == "left":
+            self.rect.x -= self.speed
+        else:
+            self.rect.x += self.speed
+
+class Enemy_v(GameSprite):
+    side = "up"
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed, y1, y2):
+        GameSprite.__init__(self, player_image, player_x, player_y, size_x, size_y)
+        self.speed = player_speed
+        self.y1 = y1
+        self.y2 = y2
+
+    def update(self):
+        if self.rect.y <= self.y1: 
+            self.side = "down"
+        if self.rect.y >= self.y2:
+            self.side = "up"
+        if self.side == "up":
+            self.rect.y -= self.speed
+        else:
+            self.rect.y += self.speed
+
+class Bullet(GameSprite):
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
+        GameSprite.__init__(self, player_image, player_x, player_y, size_x, size_y)
+        self.speed = player_speed
+
+    def update(self):
+        self.rect.x += self.speed
+        if self.rect.x > win_width+10:
+            self.kill()
+
+win_width = 1200
+win_height = 700
+window = display.set_mode((win_width, win_height))
+display.set_caption("underground labyrinth")
+
+back_m = transform.scale(image.load("меню/menu.jpg"), (win_width, win_height))
+start_but = GameSprite("меню/play1.png", 1000, 10, 200, 80)
+exit_but = GameSprite("меню/exit1.png", 0, 10, 200,80)
+mus_but = GameSprite("меню/mus1.png", 1000, 600, 80, 80)
+
+mixer.init()
+mixer.music.load("music/cave-themeb4.wav")
+mixer.music.set_volume(0.05)
+mixer.music.play(-1)
+lose = mixer.Sound("music/sad_game_over.wav")
+win = mixer.Sound("music/song18.wav")
+
+font.init()
+
+
+amount = 0
+text = font.SysFont(None, 36).render("Coins: " + str(amount), True, (255, 255, 0))
+
+back = transform.scale(image.load("изображение/FON.jpg"), (win_width, win_height))
+bullets = sprite.Group()
+barriers = sprite.Group()
+barriers = sprite.Group()
+monsters = sprite.Group()
+coins = sprite.Group()
+
+w1 = GameSprite('изображение/WALLX.jpg', 0, 500, 300, 50)
+w2 = GameSprite('изображение/WALLY.jpg', 250, 150, 50, 400)
+w3 = GameSprite('изображение/WALLY.jpg', 390, 150, 50, 550)
+w4 = GameSprite('изображение/WALLX.jpg', 440, 150, 300, 50)
+w5 = GameSprite('изображение/WALLY.jpg', 690, 200, 50, 120)
+w6 = GameSprite('изображение/WALLX.jpg', 600, 300, 140, 50)
+w7 = GameSprite('изображение/WALLY.jpg', 600, 330, 50, 140)
+w8 = GameSprite('изображение/WALLX.jpg', 530, 445, 210, 50)
+w9 = GameSprite('изображение/WALLX.jpg', 540, 575, 360, 40)
+w10 = GameSprite('изображение/WALLY.jpg', 850, 150, 50, 425)
+w11 = GameSprite('изображение/WALLX.jpg', 850, 150, 260, 40)
+w12 = GameSprite('изображение/WALLY.jpg', 1070, 150, 50, 340)
+w13 = GameSprite('изображение/WALLX.jpg', 870, 575, 360, 40)
+w14 = GameSprite('изображение/WALLX.jpg', 900, 300, 90, 40)
+w15 = GameSprite('изображение/WALLX.jpg', 1000, 450, 90, 40)
+w16 = GameSprite('изображение/WALLX.jpg', 0, 150, 150, 40)
+w17 = GameSprite('изображение/WALLX.jpg', 100, 270, 200, 40)
+
+
+barriers.add(w1)
+barriers.add(w2)
+barriers.add(w3)
+barriers.add(w4)
+barriers.add(w5)
+barriers.add(w6)
+barriers.add(w7)
+barriers.add(w8)
+barriers.add(w9)
+barriers.add(w10)
+barriers.add(w11)
+barriers.add(w12)
+barriers.add(w13)
+barriers.add(w14)
+barriers.add(w15)
+barriers.add(w16)
+barriers.add(w17)
+ 
+
+hero = Player('персонаж/CHEL.png', 5, win_height - 80, 80, 80, 0, 0)
+final_sprite = GameSprite('изображение/door.png', win_width - 85, win_height - 100, 120, 100)
+
+# функции для сброса монс. и монет =)
+def reset_level():
+    global amount, finish, monsters, coins, text
+    amount = 0
+    finish = False
+    bullets.empty()
+    monsters.empty()
+    coins.empty()
+
+    hero.rect.x = 4
+    hero.rect.y = win_height - 80
+
+    monster1 = Enemy_v('персонаж/enemy.png', 740, 200, 80, 80, 1.5, 125, 485)
+    monster2 = Enemy_h('персонаж/enemy.png', 0, 60, 80, 80, 2.5, 0, 200)
+    monster3 = Enemy_v('персонаж/enemy.png', 530, 250, 80, 80, 2, 200, 320)
+    monsters.add(monster1)
+    monsters.add(monster2)
+    monsters.add(monster3)
+
+    coin1 = GameSprite('изображение/coin.png', 90, 380, 80, 80)
+    coin2 = GameSprite('изображение/coin.png', 200, 600, 80, 80)
+    coin3 = GameSprite('изображение/coin.png', 600, 220, 80, 80)
+    coin4 = GameSprite('изображение/coin.png', 910, 220, 80, 80)
+
+    coins.add(coin1)
+    coins.add(coin2)
+    coins.add(coin3)
+    coins.add(coin4)
+
+    text = font.SysFont(None, 36).render("Coins: " + str(amount), True, (255, 255, 0))
+
+finish = False
+run = True
+a = "menu"
+music = "on"
+
+def new_func(barriers, hero):
+    hero.update(barriers)
+
+while run:
+    if a == "menu":
+        for e in event.get():
+            if e.type == QUIT:
+                run = False
+            elif e.type == MOUSEBUTTONDOWN:
+                if exit_but.rect.collidepoint(e.pos):
+                    run = False
+                if mus_but.rect.collidepoint(e.pos):
+                    if music == "on":
+                        mixer.music.pause()
+                        music = "off"
+                    else:
+                        mixer.music.unpause()
+                        music = "on"
+                if start_but.rect.collidepoint(e.pos):
+                    a = "lvl1"
+                    reset_level()
+                    mixer.music.load("music/Harp.mp3")
+                    mixer.music.set_volume(0.5)
+                    mixer.music.play(-1)
+
+        window.blit(back_m, (0, 0))
+        start_but.reset()
+        mus_but.reset()
+        exit_but.reset()
+        mouse_pos = mouse.get_pos()
+        exit_but.update(mouse_pos, "меню/exit2.png", 200, 80)
+        start_but.update(mouse_pos, "меню/play2.png", 200, 80)
+        mus_but.update(mouse_pos, "меню/mus2.png", 80, 80)  # или нужные размеры
+
+
+    elif a == "lvl1": 
+        for e in event.get(): 
+            if e.type == QUIT: 
+                run = False 
+            elif e.type == KEYDOWN: 
+                if e.key == K_LEFT: 
+                    hero.x_speed = -8 
+                if e.key == K_RIGHT: 
+                    hero.x_speed = 8 
+                if e.key == K_UP: 
+                    hero.y_speed = -8 
+                if e.key == K_DOWN: 
+                    hero.y_speed = 8 
+                if e.key == K_SPACE: 
+                    hero.fire() 
+ 
+            elif e.type == KEYUP: 
+                if e.key == K_LEFT: 
+                    hero.x_speed = 0 
+                if e.key == K_RIGHT: 
+                    hero.x_speed = 0  
+                if e.key == K_UP: 
+                    hero.y_speed = 0 
+                if e.key == K_DOWN: 
+                    hero.y_speed = 0 
+ 
+        if not finish: 
+            window.blit(back, (0, 0)) 
+            window.blit(text, (270, 0)) 
+ 
+            hero.update(barriers) 
+            hero.reset() 
+            bullets.draw(window) 
+            bullets.update() 
+ 
+            barriers.draw(window) 
+            final_sprite.reset()
+
+            sprite.groupcollide(monsters, bullets, True, True)
+            monsters.update()
+            monsters.draw(window)
+            sprite.groupcollide(bullets, barriers, True, False)
+
+            coins.draw(window)
+            if sprite.spritecollide(hero, coins, True):
+                amount += 1
+            text = font.SysFont(None, 36).render("Coins: " + str(amount), True, (255, 255, 0))
+
+            if sprite.spritecollide(hero, monsters, False):
+                finish = True
+                lose.play()
+                mixer.music.stop()
+                img = image.load('изображение/game_over.jpg')
+                lose.set_volume(0.3)
+
+                window.blit(transform.scale(img, (win_width, win_height)), (0, 0))
+
+            if sprite.collide_rect(hero, final_sprite):
+                finish = True
+                win.play()
+                mixer.music.stop()
+                img = image.load('изображение/победа.jpg')
+                win.set_volume(0.5)
+                window.blit(transform.scale(img, (win_width, win_height)), (0, 0))
+
+    time.delay(20)
+    display.update()
